@@ -1,9 +1,9 @@
-from django.http import HttpResponse
+from django.shortcuts import render
 
 
 def index(request):
-    return HttpResponse('Главная страница')
+    return render(request, 'posts/index.html')
 
 
 def group_posts(request, slug):
-    return HttpResponse(f'Самые интересные посты в мире у {slug}')
+    return render(request, 'posts/group_list.html')
