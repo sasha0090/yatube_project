@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Об авторе{% endblock %}
+
+{% block content %}
+  <figure class="text-end ">
+    <img src="{% static 'about/Avatar.png' %}" width="300" height="300"
+         style="transform: scaleX(-1); margin-right: -4%" alt="Это Я">
+    <blockquote class="blockquote">
+    <p>
+      Усердно учусь ✍🏻<br>
+      Уже познакомился с Python, SQL, Django<br>
+      Дальше больше (╹ڡ╹ )
+    </p>
+  </blockquote>
+  <figcaption class="blockquote-footer">
+    Александр, <cite title="Source Title">начинающий разработчик </cite>
+  </figcaption>
+  </figure>
+{% endblock %}
