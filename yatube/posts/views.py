@@ -11,21 +11,21 @@ from .forms import PostForm
 from .models import Group, Post
 
 
-def add_pagination(posts_num=settings.PAGINATION_POSTS_NUM):
+def add_pagination(objects_num=settings.PAGINATION_OBJECTS_NUM):
     """Декоратор для добавления пагинации"""
 
     def decorator(func):
         @wraps(func)
         def wrapper(request, *args, **kwargs):
-            r = func(request, *args, **kwargs)
-            obj = r.context_data.pop("obj")
+            response = func(request, *args, **kwargs)
+            obj = response.context_data.pop("obj")
 
-            paginator = Paginator(obj, posts_num)
+            paginator = Paginator(obj, objects_num)
             page_number = request.GET.get("page")
             page_obj = paginator.get_page(page_number)
 
-            r.context_data["page_obj"] = page_obj
-            return r.render()
+            response.context_data["page_obj"] = page_obj
+            return response.render()
 
         return wrapper
 
