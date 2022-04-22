@@ -8,7 +8,7 @@ from posts.models import Group, Post
 User = get_user_model()
 
 
-class TaskPagesTests(TestCase):
+class PostPagesTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -105,7 +105,7 @@ class TaskPagesTests(TestCase):
         page_urls = [
             reverse("posts:index"),
             reverse("posts:group_list", kwargs={"slug": self.group.slug}),
-            reverse("posts:profile", kwargs={"username": self.author.username}),
+            reverse("posts:profile", kwargs={"username": self.author.username})
         ]
 
         for url in page_urls:

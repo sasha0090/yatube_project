@@ -27,11 +27,9 @@ class PostUrlTests(TestCase):
 
     def setUp(self):
         self.guest_client = Client()
-        self.guest_client.cookies["IS_AUTH"] = "False"
 
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
-        self.authorized_client.cookies["IS_AUTH"] = "True"
 
         self.clients = {
             "guest_client": self.guest_client,
@@ -91,6 +89,7 @@ class PostUrlTests(TestCase):
             self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_redirect_not_author_edit_post(self):
+        """Проверка url редактирования чужого поста"""
         not_author = User.objects.create_user(username="not_author")
 
         second_authorized_client = Client()
