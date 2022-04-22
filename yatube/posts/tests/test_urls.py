@@ -53,22 +53,14 @@ class PostUrlTests(TestCase):
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_urls_available_to_auth_client(self):
-        anon_urls_status_code = {
-            "/create/": HTTPStatus.FOUND,
-            f"/posts/{self.post.id}/edit/": HTTPStatus.FOUND,
-        }
-        auth_urls_status_code = {
-            "/create/": HTTPStatus.OK,
-            f"/posts/{self.post.id}/edit/": HTTPStatus.OK,
-        }
-
+        urls = ["/create/", f"/posts/{self.post.id}/edit/"]
         clients_status_codes = {
-            "guest_client": anon_urls_status_code,
-            "authorized_client": auth_urls_status_code,
+            "guest_client": HTTPStatus.FOUND,
+            "authorized_client": HTTPStatus.OK,
         }
 
-        for client, urls_status_code in clients_status_codes.items():
-            for url, status_code in urls_status_code.items():
+        for url in urls:
+            for client, status_code in clients_status_codes.items():
                 with self.subTest(client=client, url=url):
                     response = self.clients[client].get(url)
                     self.assertEqual(response.status_code, status_code)
@@ -93,6 +85,7 @@ class PostUrlTests(TestCase):
         non_existent_address = "/non_exist_address/"
         with self.subTest(non_existent_address=non_existent_address):
             response = self.authorized_client.get(non_existent_address)
+            print(response)
             self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_redirect_not_author_edit_post(self):
