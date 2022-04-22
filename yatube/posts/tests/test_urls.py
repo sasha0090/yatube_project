@@ -39,6 +39,7 @@ class PostUrlTests(TestCase):
         }
 
     def test_urls_available_to_any_client(self):
+        """Проверка url доступных любому пользователю"""
         url_address = [
             "/",
             f"/group/{self.group.slug}/",
@@ -53,6 +54,7 @@ class PostUrlTests(TestCase):
                     self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_urls_available_to_auth_client(self):
+        """Проверка url доступных только авторизованному пользователю"""
         urls = ["/create/", f"/posts/{self.post.id}/edit/"]
         clients_status_codes = {
             "guest_client": HTTPStatus.FOUND,
@@ -66,7 +68,7 @@ class PostUrlTests(TestCase):
                     self.assertEqual(response.status_code, status_code)
 
     def test_urls_uses_correct_template(self):
-        """Проверка URL использует соответствующий шаблон"""
+        """Проверка url использует соответствующий шаблон"""
         templates_url_address = {
             "/": "posts/index.html",
             f"/group/{self.group.slug}/": "posts/group_list.html",
@@ -82,10 +84,10 @@ class PostUrlTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_non_exist_url(self):
+        """Проверка не существующего url"""
         non_existent_address = "/non_exist_address/"
         with self.subTest(non_existent_address=non_existent_address):
             response = self.authorized_client.get(non_existent_address)
-            print(response)
             self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_redirect_not_author_edit_post(self):

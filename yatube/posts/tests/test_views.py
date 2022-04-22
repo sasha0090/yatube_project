@@ -24,11 +24,11 @@ class TaskPagesTests(TestCase):
         )
 
     def setUp(self):
-        # Создаём авторизованный клиент
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
 
     def test_pages_uses_correct_template(self):
+        """Проверяем, что страница использует корректный шаблон"""
         templates_url_address = {
             reverse("posts:index"): "posts/index.html",
             reverse("posts:post_create"): "posts/create_post.html",
@@ -52,7 +52,7 @@ class TaskPagesTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_post_detail_pages_show_correct_context(self):
-        """Шаблон post_detail сформирован с правильным контекстом."""
+        """Шаблон post_detail сформирован с правильным контекстом"""
         response = self.authorized_client.get(
             reverse("posts:post_detail", kwargs={"post_id": self.post.id})
         )
@@ -68,33 +68,30 @@ class TaskPagesTests(TestCase):
             with self.subTest(context=context):
                 self.assertEqual(context, expected)
 
-    def test_create_page_show_correct_context(self):
+    def test_post_create_show_correct_context(self):
+        """Шаблон создания и редактирование поста
+           сформирован с правильными полями"""
         form_fields = {
             "text": forms.fields.CharField,
             "group": forms.fields.ChoiceField,
         }
 
-        response = self.authorized_client.get(reverse("posts:post_create"))
-
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context["form"].fields[value]
-                self.assertIsInstance(form_field, expected)
-
-    def test_edit_page_show_correct_context(self):
-        response = self.authorized_client.get(
-            reverse("posts:post_edit", kwargs={"post_id": self.post.id})
-        )
-        form_fields = {
-            "text": forms.fields.CharField,
-            "group": forms.fields.ChoiceField,
+        post_urls = {
+            "post_create": reverse("posts:post_create"),
+            "post_edit": reverse(
+                "posts:post_edit", kwargs={"post_id": self.post.id}
+            )
         }
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context["form"].fields[value]
-                self.assertIsInstance(form_field, expected)
+
+        for name, url in post_urls.items():
+            response = self.authorized_client.get(url)
+            for value, expected in form_fields.items():
+                with self.subTest(name=name, value=value):
+                    form_field = response.context["form"].fields[value]
+                    self.assertIsInstance(form_field, expected)
 
     def test_new_post_show_correct(self):
+        """Проверка создания и отображение поста на страницах"""
         group2 = Group.objects.create(
             title="Тестовая группа2",
             slug="test-slug2",
