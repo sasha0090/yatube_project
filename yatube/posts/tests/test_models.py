@@ -14,7 +14,7 @@ class PostModelTest(TestCase):
 
         cls.post = Post.objects.create(
             author=cls.user,
-            text="Тестовая пост",
+            text="0123456789012345678901234567890123456789",
         )
         cls.group = Group.objects.create(
             title="Тестовая группа",
@@ -77,7 +77,7 @@ class PostModelTest(TestCase):
     def test_correct_object_names(self):
         """Проверяем, что у моделей корректно работает __str__."""
         object_title = {
-            self.post.text: self.post,
+            self.post.text[:15]: self.post,
             self.group.title: self.group
         }
         for expected_object_name, obj_model in object_title.items():

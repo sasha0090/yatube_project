@@ -1,8 +1,10 @@
+import math
+
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-
 from posts.models import Group, Post
 
 User = get_user_model()
@@ -98,8 +100,9 @@ class PostPagesTests(TestCase):
             description="Тестовое описание"
         )
 
+        post_text = "Тестовый пост 2"
         Post.objects.create(
-            author=self.author, text="Тестовый пост 2", group=self.group
+            author=self.author, text=post_text, group=self.group
         )
 
         page_urls = [
@@ -112,7 +115,7 @@ class PostPagesTests(TestCase):
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)
                 post = response.context.get("page_obj").object_list[0]
-                self.assertEqual(post.text, "Тестовый пост 2")
+                self.assertEqual(post.text, post_text)
 
         response = self.authorized_client.get(
             reverse("posts:group_list", kwargs={"slug": group2.slug})
@@ -138,7 +141,9 @@ class PaginatorViewsTest(TestCase):
         post_objs = []
         for i in range(cls.object_size):
             post_obj = Post(
-                author=cls.author, text=f"Тестовая пост {i}", group=cls.group
+                author=cls.author,
+                text=f"Тестовая пост {i}",
+                group=cls.group
             )
             post_objs.append(post_obj)
         Post.objects.bulk_create(post_objs)
@@ -154,20 +159,22 @@ class PaginatorViewsTest(TestCase):
         self.authorized_client.force_login(self.author)
 
     def test_two_page_contains_records(self):
-        """Проверка:
-        Количество постов на первой странице равно 10
-        На второй странице должно быть три поста."""
-        max_pages = 2
+        """Проверка количество постов на странице"""
+        max_pages = math.ceil(self.object_size
+                              / settings.PAGINATION_OBJECTS_NUM)
 
         for page_url in self.page_urls:
-            posts_per_page = 10
+            posts_per_page = settings.PAGINATION_OBJECTS_NUM
             for page in range(1, max_pages + 1):
                 with self.subTest(page_url=page_url, page=page):
                     response = self.authorized_client.get(
-                        reverse("posts:index") + f"?page={page}"
+                        page_url + f"?page={page}"
                     )
-                    if page == 2:
-                        posts_per_page = 3
+
+                    residual_size = self.object_size - (page * posts_per_page)
+                    if residual_size < 0:
+                        posts_per_page += residual_size
+
                     self.assertEqual(
                         len(response.context["page_obj"]), posts_per_page
                     )
@@ -175,18 +182,19 @@ class PaginatorViewsTest(TestCase):
     def test_first_page_show_correct_context(self):
         """Шаблон сформирован с правильным контекстом."""
         for page_url in self.page_urls:
+
             response = self.authorized_client.get(page_url)
             page_objects = response.context.get("page_obj").object_list
             object_size = self.object_size
-
             for obj in page_objects:
-                object_size -= 1
-                context_detail = {
-                    obj.text: f"Тестовая пост {object_size}",
-                    obj.author.username: "author",
-                    obj.group.title: "Тестовая группа",
-                }
+                with self.subTest(page_url=page_url, obj=obj.text):
+                    object_size -= 1
+                    context_detail = {
+                        obj.text: f"Тестовая пост {object_size}",
+                        obj.author.username: "author",
+                        obj.group.title: "Тестовая группа",
+                    }
 
                 for context, expected in context_detail.items():
-                    with self.subTest(page_url=page_url, obj=str(obj)):
+                    with self.subTest(context=context):
                         self.assertEqual(context, expected)
