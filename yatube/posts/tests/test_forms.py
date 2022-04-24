@@ -41,6 +41,7 @@ class PostFormTests(TestCase):
 
         self.assertEqual(post.text, form_data["text"])
         self.assertEqual(post.group_id, form_data["group"])
+        self.assertEqual(post.author, self.user)
 
     def test_edit_post(self):
         """Проверка редактирования поста"""
@@ -60,6 +61,7 @@ class PostFormTests(TestCase):
         )
 
         changed_post = Post.objects.first()
+        self.assertEqual(changed_post.id, post.id)
         self.assertEqual(changed_post.text, form_data["text"])
         self.assertEqual(changed_post.group_id, form_data["group"])
 
