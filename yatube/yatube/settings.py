@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = "9+%q%cprrv$yqc(o8!e+5rk%k51oni62_yhilv&^nz^fnp#ve$"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -31,6 +31,8 @@ ALLOWED_HOSTS = [
     "[::1]",
     "testserver",
 ]
+
+# CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
 EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, "sent_emails")
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
     "posts",
     "core",
     "about",
+    "sorl.thumbnail",
 ]
 
 MIDDLEWARE = [
@@ -135,6 +138,8 @@ STATIC_URL = "/static/"
 LOGIN_URL = "users:login"
 LOGIN_REDIRECT_URL = "posts:index"
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 

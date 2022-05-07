@@ -16,8 +16,7 @@ class Group(models.Model):
         help_text="Введите адрес для страницы группы",
     )
     description = models.TextField(
-        verbose_name="Описание",
-        help_text="Введите описание группы"
+        verbose_name="Описание", help_text="Введите описание группы"
     )
 
     def __str__(self):
@@ -47,6 +46,11 @@ class Post(models.Model):
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
+    )
+    image = models.ImageField(
+        verbose_name="Картинка",
+        upload_to="posts/",
+        blank=True
     )
 
     class Meta:

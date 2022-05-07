@@ -130,3 +130,6 @@ dmypy.json
 
 # Dev/yatube_project/.gitignore
 .idea/
+
+# Media dir
+/yatube/media/
