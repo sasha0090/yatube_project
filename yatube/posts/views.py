@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 
-from .forms import PostForm
+from .forms import CommentForm, PostForm
 from .models import Group, Post
 
 
@@ -64,7 +64,14 @@ def profile(request, username):
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    context = {"post": post}
+    comments = post.comment.all()
+    comment_form = CommentForm(request.POST or None)
+
+    context = {
+        "post": post,
+        "comment_form": comment_form,
+        "comments": comments,
+    }
     if post.author == request.user:
         context["is_author"] = True
 
@@ -94,9 +101,7 @@ def post_edit(request, post_id):
         return redirect("posts:post_detail", post_id)
 
     form = PostForm(
-        request.POST or None,
-        files=request.FILES or None,
-        instance=post
+        request.POST or None, files=request.FILES or None, instance=post
     )
     if form.is_valid():
         form.save()
@@ -104,3 +109,15 @@ def post_edit(request, post_id):
 
     context = {"form": form, "is_edit": True}
     return render(request, "posts/create_post.html", context)
+
+
+@login_required
+def add_comment(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    form = CommentForm(request.POST or None)
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
+    return redirect("posts:post_detail", post_id=post_id)

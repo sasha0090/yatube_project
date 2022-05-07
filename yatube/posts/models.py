@@ -50,11 +50,39 @@ class Post(models.Model):
     image = models.ImageField(
         verbose_name="Картинка",
         upload_to="posts/",
-        blank=True
-    )
+        blank=True)
 
     class Meta:
         ordering = ["-pub_date", "-id"]
 
     def __str__(self):
         return self.text[:15]
+
+
+class Comment(models.Model):
+    post = models.ForeignKey(
+        Post,
+        verbose_name="Пост",
+        related_name="comment",
+        on_delete=models.CASCADE,
+    )
+    author = models.ForeignKey(
+        User,
+        verbose_name="Автор",
+        related_name="comment",
+        on_delete=models.CASCADE,
+    )
+    text = models.TextField(
+        verbose_name="Текст",
+        help_text="Напишите комментарий"
+    )
+    created = models.DateTimeField(
+        verbose_name="Дата публикации",
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["-created", "-id"]
+
+    def __str__(self):
+        return self.text[:30]

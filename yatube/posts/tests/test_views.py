@@ -9,7 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Group, Post
+from posts.models import Comment, Group, Post
 
 User = get_user_model()
 MEDIA_ROOT = tempfile.mkdtemp()
@@ -133,6 +133,33 @@ class PostPagesTests(TestCase):
             with self.subTest(context=context):
                 self.assertEqual(context, expected)
 
+    def test_comment_show_correct_context_on_post_page(self):
+        """Правильно отображается на странице поста"""
+        text = (
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+            "Praesent ut scelerisque velit. Nam quis suscipit elit."
+        )
+        Comment.objects.create(
+            post=self.post,
+            author=self.author,
+            text=text,
+        )
+
+        response = self.authorized_client.get(
+            reverse("posts:post_detail", kwargs={"post_id": self.post.id})
+        )
+
+        context = response.context["comments"].first()
+        context_detail = {
+            context.post.id: self.post.id,
+            context.text: text,
+            context.author.username: self.author.username,
+        }
+
+        for context, expected in context_detail.items():
+            with self.subTest(context=context):
+                self.assertEqual(context, expected)
+
     def test_new_post_show_correct(self):
         """Проверка создания нового поста и отображения на страницах"""
         group2 = Group.objects.create(
@@ -143,9 +170,7 @@ class PostPagesTests(TestCase):
 
         post_text = "Тестовый пост 2"
         Post.objects.create(
-            author=self.author,
-            text=post_text,
-            group=self.group
+            author=self.author, text=post_text, group=self.group
         )
 
         for url in self.pages_list_urls:
@@ -170,8 +195,8 @@ class PostPagesTests(TestCase):
         post_urls = {
             "post_create": reverse("posts:post_create"),
             "post_edit": reverse(
-                "posts:post_edit",
-                kwargs={"post_id": self.post.id}),
+                "posts:post_edit", kwargs={"post_id": self.post.id}
+            ),
         }
 
         for name, url in post_urls.items():
@@ -217,15 +242,17 @@ class PaginatorViewsTest(TestCase):
 
     def test_page_contains_amount_entries(self):
         """Проверка количество постов на странице"""
-        max_pages = math.ceil(self.object_size
-                              / settings.PAGINATION_OBJECTS_NUM)
+        max_pages = math.ceil(
+            self.object_size / settings.PAGINATION_OBJECTS_NUM
+        )
 
         for page_url in self.page_urls:
             posts_per_page = settings.PAGINATION_OBJECTS_NUM
             for page in range(1, max_pages + 1):
                 with self.subTest(page_url=page_url, page=page):
-                    response = self.authorized_client.get(page_url
-                                                          + f"?page={page}")
+                    response = self.authorized_client.get(
+                        page_url + f"?page={page}"
+                    )
 
                     residual_size = self.object_size - (page * posts_per_page)
                     if residual_size < 0:
