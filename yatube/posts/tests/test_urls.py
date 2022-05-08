@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import Client, TestCase
 
 from posts.models import Group, Post
@@ -26,6 +27,7 @@ class PostUrlTests(TestCase):
         )
 
     def setUp(self):
+        cache.clear()
         self.guest_client = Client()
 
         self.authorized_client = Client()
@@ -67,6 +69,7 @@ class PostUrlTests(TestCase):
 
     def test_urls_uses_correct_template(self):
         """Проверка url использует соответствующий шаблон"""
+
         templates_url_address = {
             "/": "posts/index.html",
             f"/group/{self.group.slug}/": "posts/group_list.html",
@@ -84,9 +87,11 @@ class PostUrlTests(TestCase):
     def test_non_exist_url(self):
         """Проверка не существующего url"""
         non_existent_address = "/non_exist_address/"
+        template = "core/404.html"
         with self.subTest(non_existent_address=non_existent_address):
             response = self.authorized_client.get(non_existent_address)
             self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+            self.assertTemplateUsed(response, template)
 
     def test_redirect_not_author_edit_post(self):
         """Проверка url редактирования чужого поста"""

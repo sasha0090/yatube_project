@@ -5,6 +5,7 @@ import tempfile
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -67,6 +68,7 @@ class PostPagesTests(TestCase):
         super().tearDownClass()
 
     def setUp(self):
+        cache.clear()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
 
@@ -206,6 +208,23 @@ class PostPagesTests(TestCase):
                     form_field = response.context["form"].fields[value]
                     self.assertIsInstance(form_field, expected)
 
+    def test_cache_index_page(self):
+        """Тест работы кэша"""
+        post2 = Post.objects.create(
+            author=self.author,
+            text="Тест кэша")
+
+        url = reverse("posts:index")
+
+        response = self.authorized_client.get(url)
+        post2.delete()
+        response_old = self.authorized_client.get(url)
+        self.assertEqual(response.content, response_old.content)
+
+        cache.clear()
+        response_new = self.authorized_client.get(url)
+        self.assertNotEqual(response_old.content, response_new.content)
+
 
 class PaginatorViewsTest(TestCase):
     @classmethod
@@ -237,6 +256,7 @@ class PaginatorViewsTest(TestCase):
         ]
 
     def setUp(self):
+        cache.clear()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
 
