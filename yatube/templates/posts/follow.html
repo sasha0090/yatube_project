@@ -1,13 +1,11 @@
 {% extends 'base.html' %}
 {% load cache %}
 
-{% block title %} Записи сообщества {{ group.title }} {% endblock %}
+{% block title %}Ваши подписки{% endblock %}
 
 {% block content %}
-  <h1>{{ group.title }}</h1>
-  <p>{{ group.description }}</p>
-
-  {% cache 20 profile_page %}
+  {% include 'posts/includes/switcher.html' %}
+  {% cache 20 follow_index_page %}
     {% for post in page_obj %}
       {% include 'posts/includes/article.html' %}
     {% endfor %}

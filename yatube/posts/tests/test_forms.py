@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-
 from posts.forms import CommentForm, PostForm
 from posts.models import Group, Post
 
@@ -105,16 +104,14 @@ class PostFormTests(TestCase):
 
         form_data = {
             "text": "Этот пост не должен быть создан",
-            "group": self.group.id
-        }
+            "group": self.group.id}
 
         response = guest_client.post(
             reverse("posts:post_create"), data=form_data, follow=True
         )
         post = Post.objects.first()
 
-        expected_url = (reverse("users:login")
-                        + "?next="
+        expected_url = (reverse("users:login") + "?next="
                         + reverse("posts:post_create"))
         self.assertRedirects(response, expected_url)
         self.assertIsNone(post)

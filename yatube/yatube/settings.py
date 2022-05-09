@@ -97,8 +97,8 @@ DATABASES = {
 }
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
 
@@ -149,3 +149,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 PAGINATION_OBJECTS_NUM = 10
+
+CACHE_TIMEOUT = 20

@@ -74,8 +74,7 @@ class Comment(models.Model):
     )
     text = models.TextField(
         verbose_name="Текст",
-        help_text="Напишите комментарий"
-    )
+        help_text="Напишите комментарий")
     created = models.DateTimeField(
         verbose_name="Дата публикации",
         auto_now_add=True,
@@ -86,3 +85,21 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.text[:30]
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(
+        User,
+        verbose_name="Подписчик",
+        related_name="follower",
+        on_delete=models.CASCADE,
+    )
+    author = models.ForeignKey(
+        User,
+        verbose_name="Автор",
+        related_name="following",
+        on_delete=models.CASCADE,
+    )
+
+    class Meta:
+        unique_together = ("user", "author")

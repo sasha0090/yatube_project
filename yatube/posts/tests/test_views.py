@@ -9,8 +9,7 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-
-from posts.models import Comment, Group, Post
+from posts.models import Comment, Follow, Group, Post
 
 User = get_user_model()
 MEDIA_ROOT = tempfile.mkdtemp()
@@ -28,6 +27,8 @@ class PostPagesTests(TestCase):
             slug="test-slug",
             description="Тестовое описание"
         )
+        cls.user = User.objects.create_user(username="user")
+        Follow.objects.create(user=cls.user, author=cls.author)
 
         small_gif = (
             b"\x47\x49\x46\x38\x39\x61\x02\x00"
@@ -58,6 +59,7 @@ class PostPagesTests(TestCase):
 
         cls.pages_list_urls = [
             reverse("posts:index"),
+            reverse("posts:follow_index"),
             reverse("posts:profile", kwargs={"username": cls.author.username}),
             reverse("posts:group_list", kwargs={"slug": cls.group.slug}),
         ]
@@ -69,8 +71,10 @@ class PostPagesTests(TestCase):
 
     def setUp(self):
         cache.clear()
+        self.author_client = Client()
+        self.author_client.force_login(self.author)
         self.authorized_client = Client()
-        self.authorized_client.force_login(self.author)
+        self.authorized_client.force_login(self.user)
 
     def test_pages_uses_correct_template(self):
         """Проверяем, что страница использует корректный шаблон"""
@@ -89,11 +93,12 @@ class PostPagesTests(TestCase):
             reverse(
                 "posts:post_edit", kwargs={"post_id": f"{self.post.id}"}
             ): "posts/create_post.html",
+            reverse("posts:follow_index"): "posts/index.html",
         }
 
         for reverse_name, template in templates_url_address.items():
             with self.subTest(reverse_name=reverse_name):
-                response = self.authorized_client.get(reverse_name)
+                response = self.author_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
     def test_post_show_correct_context_in_list(self):
@@ -172,8 +177,9 @@ class PostPagesTests(TestCase):
 
         post_text = "Тестовый пост 2"
         Post.objects.create(
-            author=self.author, text=post_text, group=self.group
-        )
+            author=self.author,
+            text=post_text,
+            group=self.group)
 
         for url in self.pages_list_urls:
             with self.subTest(url=url):
@@ -197,12 +203,12 @@ class PostPagesTests(TestCase):
         post_urls = {
             "post_create": reverse("posts:post_create"),
             "post_edit": reverse(
-                "posts:post_edit", kwargs={"post_id": self.post.id}
-            ),
+                "posts:post_edit",
+                kwargs={"post_id": self.post.id}),
         }
 
         for name, url in post_urls.items():
-            response = self.authorized_client.get(url)
+            response = self.author_client.get(url)
             for value, expected in form_fields.items():
                 with self.subTest(name=name, value=value):
                     form_field = response.context["form"].fields[value]
@@ -210,9 +216,7 @@ class PostPagesTests(TestCase):
 
     def test_cache_index_page(self):
         """Тест работы кэша"""
-        post2 = Post.objects.create(
-            author=self.author,
-            text="Тест кэша")
+        post2 = Post.objects.create(author=self.author, text="Тест кэша")
 
         url = reverse("posts:index")
 
@@ -224,6 +228,75 @@ class PostPagesTests(TestCase):
         cache.clear()
         response_new = self.authorized_client.get(url)
         self.assertNotEqual(response_old.content, response_new.content)
+
+
+class FollowTests(TestCase):
+    def setUp(self):
+        self.author = User.objects.create_user(username="author")
+        self.user = User.objects.create_user(username="user")
+
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+
+    def test_authorized_user_subscribe_unsubscribe(self):
+        """Пользователь может подписываться и удалять их из подписок."""
+
+        self.assertFalse(self.user.follower.exists())
+
+        self.authorized_client.get(
+            reverse(
+                "posts:profile_follow",
+                kwargs={"username": self.author.username}
+            )
+        )
+
+        self.assertEqual(self.user.follower.first().author, self.author)
+        self.authorized_client.get(
+            reverse(
+                "posts:profile_unfollow",
+                kwargs={"username": self.author.username}
+            )
+        )
+        self.assertFalse(self.user.follower.exists())
+
+    def test_new_post_available_subscribe_users_feed(self):
+        """Пост появляется в ленте подписчиков
+        и не появляется кто не подписан"""
+        unsub = User.objects.create_user(username="unsub")
+        unsub_client = Client()
+        unsub_client.force_login(unsub)
+
+        Follow.objects.create(user=self.user, author=self.author)
+
+        post = Post.objects.create(
+            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            author=self.author,
+        )
+
+        response = self.authorized_client.get(reverse("posts:follow_index"))
+        unsub_response = unsub_client.get(reverse("posts:follow_index"))
+
+        self.assertIn(post, response.context.get("page_obj").object_list)
+        self.assertNotIn(
+            post, unsub_response.context.get("page_obj").object_list
+        )
+
+    def test_forbidden_user_subscribe_to_himself(self):
+        """Пользователь не может подписаться на себя"""
+        author_client = Client()
+        author_client.force_login(self.author)
+
+        response = author_client.get(
+            reverse(
+                "posts:profile_follow",
+                kwargs={"username": self.author.username}
+            )
+        )
+        expected_redir_url = reverse(
+            "posts:profile", kwargs={"username": self.author.username}
+        )
+
+        self.assertRedirects(response, expected_redir_url)
 
 
 class PaginatorViewsTest(TestCase):
@@ -273,7 +346,8 @@ class PaginatorViewsTest(TestCase):
                     response = self.authorized_client.get(
                         page_url + f"?page={page}"
                     )
-
+                    pp = response.context["page_obj"]
+                    print(pp)
                     residual_size = self.object_size - (page * posts_per_page)
                     if residual_size < 0:
                         posts_per_page += residual_size
