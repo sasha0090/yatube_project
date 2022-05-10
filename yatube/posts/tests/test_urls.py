@@ -72,7 +72,7 @@ class PostUrlTests(TestCase):
                 with self.subTest(client=client, url=url):
                     response = self.clients[client].get(url, follow=True)
                     if client == "guest_client":
-                        expected_url = (reverse("users:login") + f"?next={url}")
+                        expected_url = reverse("users:login") + f"?next={url}"
                         self.assertRedirects(response, expected_url)
                     else:
                         self.assertEqual(response.status_code, HTTPStatus.OK)

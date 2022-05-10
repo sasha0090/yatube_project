@@ -156,7 +156,7 @@ class CommentFormTests(TestCase):
         )
 
         comment = self.post.comment.first()
-        self.assertEqual(self.post.comment.count(), post_count+1)
+        self.assertEqual(self.post.comment.count(), post_count + 1)
         self.assertEqual(comment.text, text)
         self.assertEqual(comment.author, self.user)
 
