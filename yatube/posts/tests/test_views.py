@@ -9,7 +9,8 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from posts.models import Comment, Follow, Group, Post
+
+from posts.models import Comment, Follow, Group, Post  # isort:skip
 
 User = get_user_model()
 MEDIA_ROOT = tempfile.mkdtemp()
@@ -239,7 +240,7 @@ class FollowTests(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_authorized_user_subscribe_unsubscribe(self):
-        """Пользователь может подписываться и удалять их из подписок."""
+        """Пользователь может подписываться"""
 
         self.assertFalse(self.user.follower.exists())
 
@@ -249,37 +250,7 @@ class FollowTests(TestCase):
                 kwargs={"username": self.author.username}
             )
         )
-
         self.assertEqual(self.user.follower.first().author, self.author)
-        self.authorized_client.get(
-            reverse(
-                "posts:profile_unfollow",
-                kwargs={"username": self.author.username}
-            )
-        )
-        self.assertFalse(self.user.follower.exists())
-
-    def test_new_post_available_subscribe_users_feed(self):
-        """Пост появляется в ленте подписчиков
-        и не появляется кто не подписан"""
-        unsub = User.objects.create_user(username="unsub")
-        unsub_client = Client()
-        unsub_client.force_login(unsub)
-
-        Follow.objects.create(user=self.user, author=self.author)
-
-        post = Post.objects.create(
-            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            author=self.author,
-        )
-
-        response = self.authorized_client.get(reverse("posts:follow_index"))
-        unsub_response = unsub_client.get(reverse("posts:follow_index"))
-
-        self.assertIn(post, response.context.get("page_obj").object_list)
-        self.assertNotIn(
-            post, unsub_response.context.get("page_obj").object_list
-        )
 
     def test_forbidden_user_subscribe_to_himself(self):
         """Пользователь не может подписаться на себя"""
@@ -297,6 +268,44 @@ class FollowTests(TestCase):
         )
 
         self.assertRedirects(response, expected_redir_url)
+
+    def test_authorized_user_unsubscribe(self):
+        """Пользователь может отписаться"""
+        Follow.objects.create(user=self.user, author=self.author)
+
+        self.authorized_client.get(
+            reverse(
+                "posts:profile_unfollow",
+                kwargs={"username": self.author.username}
+            )
+        )
+        self.assertFalse(self.user.follower.exists())
+
+    def test_new_post_shown_in_feed_subscriber(self):
+        """Пост появляется в ленте подписанного пользователя"""
+        Follow.objects.create(user=self.user, author=self.author)
+
+        post = Post.objects.create(
+            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            author=self.author,
+        )
+
+        response = self.authorized_client.get(reverse("posts:follow_index"))
+        self.assertIn(post, response.context.get("page_obj").object_list)
+
+    def test_new_post_doesnt_show_in_feed_unsubscribed(self):
+        """У не подписанного пользователя пост не появляется в ленте"""
+        unsub = User.objects.create_user(username="unsub")
+        unsub_client = Client()
+        unsub_client.force_login(unsub)
+
+        post = Post.objects.create(
+            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            author=self.author,
+        )
+
+        response = unsub_client.get(reverse("posts:follow_index"))
+        self.assertNotIn(post, response.context.get("page_obj").object_list)
 
 
 class PaginatorViewsTest(TestCase):
@@ -346,8 +355,7 @@ class PaginatorViewsTest(TestCase):
                     response = self.authorized_client.get(
                         page_url + f"?page={page}"
                     )
-                    pp = response.context["page_obj"]
-                    print(pp)
+
                     residual_size = self.object_size - (page * posts_per_page)
                     if residual_size < 0:
                         posts_per_page += residual_size

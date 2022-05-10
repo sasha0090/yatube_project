@@ -3,7 +3,9 @@ from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import Client, TestCase
-from posts.models import Group, Post
+from django.urls import reverse
+
+from posts.models import Group, Post  # isort:skip
 
 User = get_user_model()
 
@@ -54,26 +56,36 @@ class PostUrlTests(TestCase):
 
     def test_urls_available_to_auth_client(self):
         """Проверка url доступных только авторизованному пользователю"""
-        urls = ["/create/", f"/posts/{self.post.id}/edit/"]
-        clients_status_codes = {
-            "guest_client": HTTPStatus.FOUND,
-            "authorized_client": HTTPStatus.OK,
-        }
+        following_user = User.objects.create_user(username="another_user")
+        urls = [
+            "/create/",
+            "/follow/",
+            f"/posts/{self.post.id}/edit/",
+            f"/posts/{self.post.id}/comment/",
+            f"/profile/{following_user.username}/follow/",
+            f"/profile/{following_user.username}/unfollow/"
+        ]
+        clients = ["guest_client", "authorized_client"]
 
         for url in urls:
-            for client, status_code in clients_status_codes.items():
+            for client in clients:
                 with self.subTest(client=client, url=url):
-                    response = self.clients[client].get(url)
-                    self.assertEqual(response.status_code, status_code)
+                    response = self.clients[client].get(url, follow=True)
+                    if client == "guest_client":
+                        expected_url = (reverse("users:login") + f"?next={url}")
+                        self.assertRedirects(response, expected_url)
+                    else:
+                        self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_urls_uses_correct_template(self):
         """Проверка url использует соответствующий шаблон"""
 
         templates_url_address = {
             "/": "posts/index.html",
+            "/create/": "posts/create_post.html",
+            "/follow/": "posts/index.html",
             f"/group/{self.group.slug}/": "posts/group_list.html",
             f"/profile/{self.author.username}/": "posts/profile.html",
-            "/create/": "posts/create_post.html",
             f"/posts/{self.post.id}/": "posts/post_detail.html",
             f"/posts/{self.post.id}/edit/": "posts/create_post.html",
         }

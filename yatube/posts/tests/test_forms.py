@@ -5,8 +5,9 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from posts.forms import CommentForm, PostForm
-from posts.models import Group, Post
+
+from posts.forms import CommentForm, PostForm  # isort:skip
+from posts.models import Group, Post  # isort:skip
 
 User = get_user_model()
 MEDIA_ROOT = tempfile.mkdtemp()
@@ -135,6 +136,8 @@ class CommentFormTests(TestCase):
 
     def test_create_comment(self):
         """Проверка создания комментария"""
+        post_count = self.post.comment.count()
+
         text = (
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
             "Praesent ut scelerisque velit. Nam quis suscipit elit."
@@ -153,7 +156,7 @@ class CommentFormTests(TestCase):
         )
 
         comment = self.post.comment.first()
-
+        self.assertEqual(self.post.comment.count(), post_count+1)
         self.assertEqual(comment.text, text)
         self.assertEqual(comment.author, self.user)
 

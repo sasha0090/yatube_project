@@ -4,14 +4,12 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.views.decorators.cache import cache_page
-
 from yatube.settings import CACHE_TIMEOUT
 
-from .forms import CommentForm, PostForm
+from .forms import CommentForm, PostForm  # isort:skip
 from .models import Follow, Group, Post
 
 
@@ -60,7 +58,11 @@ def profile(request, username):
     user = get_object_or_404(get_user_model(), username=username)
     posts = user.posts.all()
 
-    context = {"author": user, "obj": posts}
+    context = {
+        "author": user,
+        "obj": posts,
+        "is_author": user != request.user,
+    }
 
     if request.user.is_authenticated:
         following_exist = request.user.follower.filter(author=user).exists()
@@ -78,9 +80,8 @@ def post_detail(request, post_id):
         "post": post,
         "comment_form": comment_form,
         "comments": comments,
+        "is_author": post.author == request.user,
     }
-    if post.author == request.user:
-        context["is_author"] = True
 
     return render(request, "posts/post_detail.html", context=context)
 
@@ -135,11 +136,7 @@ def add_comment(request, post_id):
 def follow_index(request):
     following_ids = request.user.follower.values_list("author", flat=True)
     posts = Post.objects.filter(author_id__in=following_ids)
-    print()
-
-    context = {"obj": posts}
-
-    return TemplateResponse(request, "posts/index.html", context)
+    return TemplateResponse(request, "posts/index.html", {"obj": posts})
 
 
 @login_required
@@ -148,16 +145,17 @@ def profile_follow(request, username):
 
     if request.user == author:
         return redirect("posts:profile", username=username)
-    try:
-        Follow.objects.create(user=request.user, author=author)
-    except IntegrityError as e:
-        if "unique constraint" in e.args[0]:
-            return redirect("posts:profile", username=username)
+
+    Follow.objects.get_or_create(user=request.user, author=author)
+
     return redirect("posts:profile", username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
-    author = request.user.follower.filter(author__username=username).first()
-    author.delete()
+    following = request.user.follower.filter(author__username=username).first()
+
+    if following:
+        following.delete()
+
     return redirect("posts:profile", username=username)
